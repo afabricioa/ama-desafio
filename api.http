@@ -1,0 +1,15 @@
+###
+GET http://localhost:8080/produtos
+
+###
+POST http://localhost:8080/produtos
+Content-Type: application/json
+{
+    "nome": "Produto 1",
+    "ativo": true,
+    "sku": "P1091223",
+    "categoria": 
+}
+
+###
+GET http://localhost:8080/usuarios

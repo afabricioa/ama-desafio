@@ -1,14 +1,17 @@
-package br.com.fabricio.ama.amadesafio.controllers;
+package br.com.fabricio.ama.amadesafio.controller;
 
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
 import at.favre.lib.crypto.bcrypt.BCrypt;
 import br.com.fabricio.ama.amadesafio.models.Usuario;
-import br.com.fabricio.ama.amadesafio.repositorios.IUsuarioRepositorio;
+import br.com.fabricio.ama.amadesafio.repositories.IUsuarioRepositorio;
+
+import java.util.List;
 
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 
@@ -19,7 +22,7 @@ public class UsuarioController {
     
     private IUsuarioRepositorio usuarioRepositorio;
 
-    @PostMapping("/")
+    @PostMapping
     public ResponseEntity create(@RequestBody Usuario usuario) {
         var usuariEncontrado = usuarioRepositorio.findByUsername(usuario.getUsername());
         
@@ -35,5 +38,12 @@ public class UsuarioController {
 
         return ResponseEntity.status(HttpStatus.CREATED).body(usuarioCriado);
     }
-    
+
+    @GetMapping
+    public List<Usuario> getAllUsers(){
+        return this.usuarioRepositorio.findAll();
+    }
+
 }
+
+  
