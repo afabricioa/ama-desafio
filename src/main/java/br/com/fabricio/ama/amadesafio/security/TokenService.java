@@ -44,7 +44,6 @@ public class TokenService {
                     .verify(token)
                     .getSubject();
         } catch (Exception e) {
-            System.out.println("mensagem: " + e.getMessage());
             return "";
         }
     }
