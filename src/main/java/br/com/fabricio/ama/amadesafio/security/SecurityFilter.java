@@ -3,6 +3,7 @@ package br.com.fabricio.ama.amadesafio.security;
 import java.io.IOException;
 
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.http.HttpHeaders;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.security.core.userdetails.UserDetails;
@@ -28,13 +29,21 @@ public class SecurityFilter extends OncePerRequestFilter{
     protected void doFilterInternal(HttpServletRequest request, HttpServletResponse response, FilterChain filterChain)
             throws ServletException, IOException {
         var token = this.recoverToken(request);
+        var servletPath = request.getServletPath();
         if(token != null){
             var username = tokenService.validateToken(token);
             UserDetails usuario = usuarioRepositorio.findByUsername(username);
             var autenticacao = new UsernamePasswordAuthenticationToken(usuario, null, usuario.getAuthorities());
             SecurityContextHolder.getContext().setAuthentication(autenticacao);
             request.setAttribute("username", username);
-        } 
+        } else if(servletPath.startsWith("/categorias") || servletPath.startsWith("/produtos")){
+            response.setCharacterEncoding("UTF-8");
+            response.setStatus(HttpServletResponse.SC_UNAUTHORIZED);
+            response.setHeader(HttpHeaders.CONTENT_TYPE, "text/plain");
+            response.getWriter().flush();
+            response.getWriter().write("Usuário não autenticado. Por favor, forneça um token válido.");
+            return;
+        }
         filterChain.doFilter(request, response);
     }
 
