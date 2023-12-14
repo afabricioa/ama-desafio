@@ -22,7 +22,7 @@ public class InicializacaoDados implements CommandLineRunner{
             String adminPasswordEncrypted = new BCryptPasswordEncoder().encode("admin");
             Usuario admin = new Usuario("admin", "Administrador", adminPasswordEncrypted, true);
             
-            String estoquistaPasswordEncrypted = new BCryptPasswordEncoder().encode("estoquita");
+            String estoquistaPasswordEncrypted = new BCryptPasswordEncoder().encode("estoquista");
             Usuario estoquista = new Usuario("estoquista", "Estoquista", estoquistaPasswordEncrypted, false);
 
             usuarioRepositorio.save(admin);

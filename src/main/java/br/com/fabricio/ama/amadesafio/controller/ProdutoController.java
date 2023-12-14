@@ -3,12 +3,14 @@ package br.com.fabricio.ama.amadesafio.controller;
 import br.com.fabricio.ama.amadesafio.dtos.ProdutoRequestDTO;
 import br.com.fabricio.ama.amadesafio.exceptions.CategoriaNotFoundException;
 import br.com.fabricio.ama.amadesafio.exceptions.ProdutoValidationException;
+import br.com.fabricio.ama.amadesafio.exceptions.UsuarioNotFoundException;
 import br.com.fabricio.ama.amadesafio.models.Categoria;
 import br.com.fabricio.ama.amadesafio.models.Produto;
 import br.com.fabricio.ama.amadesafio.models.Usuario;
 import br.com.fabricio.ama.amadesafio.repositories.ICategoriaRepositorio;
 import br.com.fabricio.ama.amadesafio.repositories.IProdutoRepositorio;
 import br.com.fabricio.ama.amadesafio.repositories.IUsuarioRepositorio;
+import br.com.fabricio.ama.amadesafio.utils.TipoCategoria;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.Parameter;
 import io.swagger.v3.oas.annotations.Parameters;
@@ -17,6 +19,7 @@ import io.swagger.v3.oas.annotations.media.Schema;
 import io.swagger.v3.oas.annotations.responses.ApiResponse;
 import io.swagger.v3.oas.annotations.responses.ApiResponses;
 import io.swagger.v3.oas.annotations.security.SecurityRequirement;
+import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.servlet.http.HttpServletRequest;
 
 import java.util.List;
@@ -26,16 +29,22 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.userdetails.UserDetails;
+import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PatchMapping;
+import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
+import org.springframework.web.bind.annotation.PutMapping;
+
 
 
 @RestController
 @RequestMapping("/produtos")
+@Tag(name = "ProdutoController")
 public class ProdutoController {
     
     @Autowired
@@ -65,6 +74,7 @@ public class ProdutoController {
         @Parameter(name = "filtroIcms", description = "Filtrar por valor mínimo ICMS", schema = @Schema(title = "icms", type = "float")),
         @Parameter(name = "filtroCusto", description = "Filtrar por valor mínimo de Custo", schema = @Schema(title = "sku", type = "float")),
         @Parameter(name = "filtroEstoque", description = "Filtrar por valor mínimo em Estoque", schema = @Schema(title = "sku", type = "float")),
+        @Parameter(name = "filtroUsuario", description =  "Filtrar por login do usuário que cadastrou o produto", schema = @Schema(title = "usuario", type = "string"))
     })
     @GetMapping
     public ResponseEntity getProdutos(
@@ -74,14 +84,37 @@ public class ProdutoController {
                             @RequestParam(name = "filtroSku", required = false) String filtroSku,
                             @RequestParam(name = "filtroIcms", required = false) Float filtroIcms,
                             @RequestParam(name = "filtroCusto", required = false) Float filtroCusto,
-                            @RequestParam(name = "filtroEstoque", required = false) Float filtroEstoque
+                            @RequestParam(name = "filtroEstoque", required = false) Integer filtroEstoque,
+                            @RequestParam(name = "filtroUsuario", required = false) String filtroUsuario
                         ) {
-                            
-        String username = (String) request.getAttribute("username");
-        UserDetails usuarioLogado = this.usuarioRepositorio.findByUsername(username);
-        // System.out.println("logado " + ((Usuario) usuarioLogado).getNome());
-        List<Produto> produtos = this.produtoRepositorio.findAll();
-        return ResponseEntity.status(200).body(produtos);
+       
+        try {
+            Optional<Categoria> categoria = null;
+
+            UserDetails usuario = this.usuarioRepositorio.findByUsername(filtroUsuario);
+
+            if(filtroUsuario != null && usuario == null){
+                throw new UsuarioNotFoundException("Usuário não cadastrado no sistema");
+            } 
+
+            if(filtroCategoria != null){
+                TipoCategoria tipoCategoria = TipoCategoria.valueOf(filtroCategoria.toUpperCase());
+                categoria = this.categoriaRepositorio.findByTipo(tipoCategoria);
+                
+                if(categoria.isEmpty()){
+                    throw new CategoriaNotFoundException("Categoria não cadastrada no sistema");
+                }
+            }
+            
+            List<Produto> produtos = this.produtoRepositorio.findProdutoByCriteria(filtroNome, categoria != null ? categoria.get() : null, filtroSku, filtroIcms, filtroCusto, filtroEstoque, (Usuario) usuario);
+            return ResponseEntity.status(200).body(produtos);
+        } catch (UsuarioNotFoundException e) {
+            return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(e.getMessage());
+        } catch (CategoriaNotFoundException e) {
+            return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(e.getMessage());
+        } catch (Exception e) {
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body("Ocorreu um erro interno no servidor.");
+        }
     }
 
     @Operation(
@@ -130,6 +163,140 @@ public class ProdutoController {
         } catch (CategoriaNotFoundException e) {
             return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(e.getMessage());
         } catch (Exception e) {
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body("Ocorreu um erro interno no servidor.");
+        }
+    }
+
+    @Operation(
+        security = {@SecurityRequirement(name = "bearer-key")}, 
+        summary = "Atualizar Produto",
+        description = "Preencha apenas os campos que deseja atualizar e apague o resto",
+        method = "PUT"
+    )
+    @ApiResponses(value = {
+        @ApiResponse(responseCode = "201", description = "Produto Atualizado com Sucesso!", content = @Content()),
+        @ApiResponse(responseCode = "400", description = "Requisição incorreta", content = @Content()),
+        @ApiResponse(responseCode = "401", description = "Requisição não autorizada!", content = @Content()),
+        @ApiResponse(responseCode = "500", description = "Ocorreu um erro interno, verifique os logs!", content = @Content()),
+    })
+    @PutMapping("/{id}")
+    public ResponseEntity update(@PathVariable Integer id, @RequestBody ProdutoRequestDTO produto, HttpServletRequest request){
+        try {
+            Optional<Produto> produtoExistente = this.produtoRepositorio.findById(id);
+            if (produtoExistente.isEmpty()) {
+                throw new ProdutoValidationException("Produto não encontrado");
+            }
+
+            Produto produtoAtualizado = produtoExistente.get();
+
+            Optional<Produto> produtoEncontrado = this.produtoRepositorio.findBySku(produto.getSku());
+            if(produtoEncontrado.isPresent() && produtoEncontrado.get().getId() != produtoAtualizado.getId()){
+                throw new ProdutoValidationException("O código SKU já foi cadastrado em outro produto");
+            }
+
+            // String username = (String) request.getAttribute("username");
+            // UserDetails usuarioLogado = this.usuarioRepositorio.findByUsername(username);
+            Optional<Categoria> categoria = null;
+            
+            if(produto.getCategoriaId() != null){
+                categoria = this.categoriaRepositorio.findById(produto.getCategoriaId());
+
+                if(categoria.isPresent()){
+                    produtoAtualizado.setCategoria(categoria.get());
+                }
+            }
+
+            if(produto.getNome() != null && produto.getNome() != ""){
+                produtoAtualizado.setNome(produto.getNome());
+            }
+
+            if(produto.getSku() != null && produto.getSku() != ""){
+                produtoAtualizado.setSku(produto.getSku());
+            }
+
+            if(produto.getValorDeCusto() != null){
+                produtoAtualizado.setValorDeCusto(produto.getValorDeCusto());
+            }
+
+            if(produto.getQuantidadeEmEstoque() != null){
+                produtoAtualizado.setQuantidadeEmEstoque(produto.getQuantidadeEmEstoque());
+            }
+
+            if(produto.getIcms() != null){
+                produtoAtualizado.setIcms(produto.getIcms());
+            }
+                        
+            var updatedProduct = this.produtoRepositorio.save(produtoAtualizado);
+
+            return ResponseEntity.status(HttpStatus.CREATED).body(updatedProduct);
+        } catch (ProdutoValidationException e) {
+            return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(e.getMessage());
+        } catch (CategoriaNotFoundException e) {
+            return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(e.getMessage());
+        } catch (Exception e) {
+            System.out.println(e.getMessage());
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body("Ocorreu um erro interno no servidor.");
+        }
+    }
+    @Operation(
+        security = {@SecurityRequirement(name = "bearer-key")}, 
+        summary = "Inativar Produto",
+        method = "PATCH"
+    )
+    @ApiResponses(value = {
+        @ApiResponse(responseCode = "201", description = "Produto Desativado com Sucesso!", content = @Content()),
+        @ApiResponse(responseCode = "400", description = "Requisição incorreta", content = @Content()),
+        @ApiResponse(responseCode = "401", description = "Requisição não autorizada!", content = @Content()),
+        @ApiResponse(responseCode = "500", description = "Ocorreu um erro interno, verifique os logs!", content = @Content()),
+    })
+    @PatchMapping("/{id}")
+    public ResponseEntity inativarProduto(@PathVariable Integer id, HttpServletRequest request){
+        try{
+            Optional<Produto> produtoExistente = this.produtoRepositorio.findById(id);
+            if (produtoExistente.isEmpty()) {
+                throw new ProdutoValidationException("Produto não encontrado");
+            }
+
+            Produto produtoInativado = produtoExistente.get();
+
+            produtoInativado.setAtivo(false);
+
+            var updatedProduct = this.produtoRepositorio.save(produtoInativado);
+
+            return ResponseEntity.status(HttpStatus.OK).body(updatedProduct);
+        } catch (ProdutoValidationException e) {
+            return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(e.getMessage());
+        } catch (Exception e) {
+            System.out.println(e.getMessage());
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body("Ocorreu um erro interno no servidor.");
+        }
+    }
+    @Operation(
+        security = {@SecurityRequirement(name = "bearer-key")}, 
+        summary = "Excluir Produto",
+        method = "DELETE"
+    )
+    @ApiResponses(value = {
+        @ApiResponse(responseCode = "201", description = "Produto Excluí com Sucesso!", content = @Content()),
+        @ApiResponse(responseCode = "400", description = "Requisição incorreta", content = @Content()),
+        @ApiResponse(responseCode = "401", description = "Requisição não autorizada!", content = @Content()),
+        @ApiResponse(responseCode = "500", description = "Ocorreu um erro interno, verifique os logs!", content = @Content()),
+    })
+    @DeleteMapping("/{id}")
+    public ResponseEntity deletarProduto(@PathVariable Integer id, HttpServletRequest request){
+        try{
+            Optional<Produto> produtoExistente = this.produtoRepositorio.findById(id);
+            if (produtoExistente.isEmpty()) {
+                throw new ProdutoValidationException("Produto não encontrado");
+            }
+
+            this.produtoRepositorio.delete(produtoExistente.get());
+
+            return ResponseEntity.status(HttpStatus.OK).body("Produto excluído permanentemente");
+        } catch (ProdutoValidationException e) {
+            return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(e.getMessage());
+        } catch (Exception e) {
+            System.out.println(e.getMessage());
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body("Ocorreu um erro interno no servidor.");
         }
     }

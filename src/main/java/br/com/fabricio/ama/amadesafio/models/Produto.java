@@ -1,6 +1,8 @@
 package br.com.fabricio.ama.amadesafio.models;
 
 import java.time.LocalDateTime;
+import java.util.ArrayList;
+import java.util.List;
 
 import org.hibernate.annotations.CreationTimestamp;
 import org.springframework.data.jpa.domain.Specification;
@@ -13,6 +15,10 @@ import jakarta.persistence.GenerationType;
 import jakarta.persistence.Id;
 import jakarta.persistence.JoinColumn;
 import jakarta.persistence.ManyToOne;
+import jakarta.persistence.criteria.CriteriaBuilder;
+import jakarta.persistence.criteria.CriteriaQuery;
+import jakarta.persistence.criteria.Predicate;
+import jakarta.persistence.criteria.Root;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
 import lombok.Data;
@@ -56,27 +62,43 @@ public class Produto {
     @JoinColumn(name = "usuario_id")
     private Usuario usuario;
 
-    public static Specification<Produto> filterByNome(String nome){
-        return (root, query, builder) -> builder.like(root.get("nome"), "%" + nome + "%");
-    }
+    public static Specification<Produto> filtros(String nome, String sku, Integer categoriaId, Float valorDeCusto, Float icms, Float estoque){
+        return new Specification<Produto>(){
+            @Override
+            public Predicate toPredicate(
+                    Root<Produto> root,
+                    CriteriaQuery<?> query, 
+                    CriteriaBuilder criteriaBuilder) {
+                
+                List<Predicate> predicates = new ArrayList<>();
 
-    public static Specification<Produto> filterByCategoria(Integer categoriaId){
-        return (root, query, builder) -> builder.equal(root.get("categoria").get("id"), categoriaId);
-    }
+                if(nome != "" && nome != null ){
+                    predicates.add(criteriaBuilder.like(root.get("nome"), "%" + nome + "%"));
+                }
 
-    public static Specification<Produto> filterBySku(String sku){
-        return (root, query, builder) -> builder.like(root.get("sku"), "%" + sku + "%");
-    }
+                if(sku != "" && sku != null ){
+                    predicates.add(criteriaBuilder.like(root.get("sku"), "%" + sku + "%"));
+                }
 
-    public static Specification<Produto> filterByValorCusto(Float valorDeCusto){
-        return (root, query, builder) -> builder.greaterThanOrEqualTo(root.get("valorDeCusto"), valorDeCusto);
-    }
+                if(categoriaId != null ){
+                    predicates.add(criteriaBuilder.equal(root.get("categoria").get("id"), categoriaId));
+                }
 
-    public static Specification<Produto> filterByIcms(Float icms){
-        return (root, query, builder) -> builder.greaterThanOrEqualTo(root.get("icms"), icms);
-    }
+                if(valorDeCusto != null ){
+                    predicates.add(criteriaBuilder.greaterThanOrEqualTo(root.get("valorDeCusto"), valorDeCusto));
+                }
 
-    public static Specification<Produto> filterByValorEstoque(Float estoque){
-        return (root, query, builder) -> builder.greaterThanOrEqualTo(root.get("estoque"), estoque);
+
+                if(icms != null ){
+                    predicates.add(criteriaBuilder.greaterThanOrEqualTo(root.get("icms"), icms));
+                }
+
+                if(estoque != null ){
+                    predicates.add(criteriaBuilder.greaterThanOrEqualTo(root.get("quantidadeEmEstoque"), estoque));
+                }
+
+                return criteriaBuilder.and(predicates.toArray(new Predicate[predicates.size()]));
+            }
+        };
     }
 }
