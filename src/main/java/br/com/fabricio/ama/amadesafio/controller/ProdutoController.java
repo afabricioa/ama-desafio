@@ -194,8 +194,12 @@ public class ProdutoController {
                 throw new ProdutoValidationException("O código SKU já foi cadastrado em outro produto");
             }
 
-            // String username = (String) request.getAttribute("username");
-            // UserDetails usuarioLogado = this.usuarioRepositorio.findByUsername(username);
+            String username = (String) request.getAttribute("username");
+            Usuario usuarioLogado = (Usuario) this.usuarioRepositorio.findByUsername(username);
+            System.out.println("produto "  + produto);
+            if(!usuarioLogado.getIsAdmin() && (produto.getValorDeCusto() != 0.0 || produto.getIcms() != 0.0)){
+                throw new ProdutoValidationException("O usuário autenticado não possui permissão para alterar o Valor do Custo ou ICMS.");
+            }
             Optional<Categoria> categoria = null;
             
             if(produto.getCategoriaId() != null){
