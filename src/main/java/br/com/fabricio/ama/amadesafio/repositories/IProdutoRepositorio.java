@@ -3,6 +3,7 @@ package br.com.fabricio.ama.amadesafio.repositories;
 import java.util.List;
 import java.util.Optional;
 
+import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.JpaSpecificationExecutor;
 import org.springframework.data.jpa.repository.Query;
@@ -30,6 +31,7 @@ public interface IProdutoRepositorio extends JpaRepository<Produto, Integer>, Jp
             @Param("filtroIcms") Float filtroIcms,
             @Param("filtroCusto") Float filtroCusto,
             @Param("filtroEstoque") Integer filtroEstoque,
-            @Param("filtroUsuario") Usuario filtroUsuario);
+            @Param("filtroUsuario") Usuario filtroUsuario,
+            Pageable pageable);
 }
     

@@ -1,6 +1,7 @@
 package br.com.fabricio.ama.amadesafio.controller;
 
 import br.com.fabricio.ama.amadesafio.dtos.ProdutoRequestDTO;
+import br.com.fabricio.ama.amadesafio.dtos.ProdutoResponseDTO;
 import br.com.fabricio.ama.amadesafio.exceptions.CategoriaNotFoundException;
 import br.com.fabricio.ama.amadesafio.exceptions.ProdutoValidationException;
 import br.com.fabricio.ama.amadesafio.exceptions.UsuarioNotFoundException;
@@ -22,22 +23,28 @@ import io.swagger.v3.oas.annotations.security.SecurityRequirement;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.servlet.http.HttpServletRequest;
 
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
 
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.data.domain.Pageable;
 import org.springframework.http.HttpStatus;
+import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.ModelAttribute;
 import org.springframework.web.bind.annotation.PatchMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
+import org.springframework.web.bind.annotation.RequestPart;
 import org.springframework.web.bind.annotation.RestController;
+import org.springframework.web.multipart.MultipartFile;
 import org.springframework.web.bind.annotation.PutMapping;
 
 
@@ -68,24 +75,27 @@ public class ProdutoController {
         @ApiResponse(responseCode = "500", description = "Ocorreu um erro interno, verifique os logs!", content = @Content()),
     })
     @Parameters({
-        @Parameter(name = "filtroNome", description = "Filtrar por nome do produto", schema = @Schema(title = "nome", type = "string")),
+        @Parameter(name = "nome", description = "Filtrar por nome do produto", schema = @Schema(title = "nome", type = "string")),
         @Parameter(name = "filtroCategoria", description = "Filtrar por Categoria", schema = @Schema(title = "categoria", type = "string", allowableValues = {"NORMAL", "ESPECIAL", "PERSONALIZADO"})),
-        @Parameter(name = "filtroSku", description = "Filtrar código do produto(SKU)", schema = @Schema(title = "sku", type = "string")),
-        @Parameter(name = "filtroIcms", description = "Filtrar por valor mínimo ICMS", schema = @Schema(title = "icms", type = "float")),
-        @Parameter(name = "filtroCusto", description = "Filtrar por valor mínimo de Custo", schema = @Schema(title = "sku", type = "float")),
-        @Parameter(name = "filtroEstoque", description = "Filtrar por valor mínimo em Estoque", schema = @Schema(title = "sku", type = "float")),
+        @Parameter(name = "sku", description = "Filtrar código do produto(SKU)", schema = @Schema(title = "sku", type = "string")),
+        @Parameter(name = "icms", description = "Filtrar por valor mínimo ICMS", schema = @Schema(title = "icms", type = "float")),
+        @Parameter(name = "valorDeCusto", description = "Filtrar por valor mínimo de Custo", schema = @Schema(title = "valorDeCusto", type = "float")),
+        @Parameter(name = "valorDeVenda", description = "Filtrar por valor mínimo de Venda", schema = @Schema(title = "valorDeVenda", type = "float")),
+        @Parameter(name = "quantidadeEmEstoque", description = "Filtrar por valor mínimo em Estoque", schema = @Schema(title = "quantidadeEmEstoque", type = "float")),
         @Parameter(name = "filtroUsuario", description =  "Filtrar por login do usuário que cadastrou o produto", schema = @Schema(title = "usuario", type = "string"))
     })
     @GetMapping
     public ResponseEntity getProdutos(
                             HttpServletRequest request,
-                            @RequestParam(name = "filtroNome", required = false) String filtroNome,
+                            @RequestParam(name = "nome", required = false) String filtroNome,
                             @RequestParam(name = "filtroCategoria", required = false) String filtroCategoria,
-                            @RequestParam(name = "filtroSku", required = false) String filtroSku,
-                            @RequestParam(name = "filtroIcms", required = false) Float filtroIcms,
-                            @RequestParam(name = "filtroCusto", required = false) Float filtroCusto,
-                            @RequestParam(name = "filtroEstoque", required = false) Integer filtroEstoque,
-                            @RequestParam(name = "filtroUsuario", required = false) String filtroUsuario
+                            @RequestParam(name = "sku", required = false) String filtroSku,
+                            @RequestParam(name = "icms", required = false) Float filtroIcms,
+                            @RequestParam(name = "valorDeCusto", required = false) Float filtroCusto,
+                            @RequestParam(name = "valorDeVenda", required = false) Float filtroVenda,
+                            @RequestParam(name = "quantidadeEmEstoque", required = false) Integer filtroEstoque,
+                            @RequestParam(name = "filtroUsuario", required = false) String filtroUsuario,
+                            Pageable pageable
                         ) {
        
         try {
@@ -106,13 +116,21 @@ public class ProdutoController {
                 }
             }
             
-            List<Produto> produtos = this.produtoRepositorio.findProdutoByCriteria(filtroNome, categoria != null ? categoria.get() : null, filtroSku, filtroIcms, filtroCusto, filtroEstoque, (Usuario) usuario);
-            return ResponseEntity.status(200).body(produtos);
+            List<Produto> produtos = this.produtoRepositorio.findProdutoByCriteria(filtroNome, categoria != null ? categoria.get() : null, filtroSku, filtroIcms, filtroCusto, filtroEstoque, (Usuario) usuario, pageable);
+            List<ProdutoResponseDTO> produtosDTO = new ArrayList<>();
+            produtos.forEach(produto -> {
+                produtosDTO.add(produto.toDto(produto));
+            });
+            return ResponseEntity.status(200).body(produtosDTO);
         } catch (UsuarioNotFoundException e) {
             return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(e.getMessage());
         } catch (CategoriaNotFoundException e) {
             return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(e.getMessage());
         } catch (Exception e) {
+            System.out.println(e.getCause() + " " + e.getMessage());
+            if(e.getCause() instanceof IllegalArgumentException){
+                return ResponseEntity.status(HttpStatus.BAD_REQUEST).body("Escolha um atributo de ordenação correto (nome, sku, valorDeCusto, icms, quantidadeEmEstoque).");
+            }
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body("Ocorreu um erro interno no servidor.");
         }
     }
@@ -128,9 +146,10 @@ public class ProdutoController {
         @ApiResponse(responseCode = "401", description = "Requisição não autorizada!", content = @Content()),
         @ApiResponse(responseCode = "500", description = "Ocorreu um erro interno, verifique os logs!", content = @Content()),
     })
-    @PostMapping
-    public ResponseEntity create(@RequestBody ProdutoRequestDTO produto, HttpServletRequest request) {
+    @PostMapping(consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
+    public ResponseEntity create(@ModelAttribute ProdutoRequestDTO produto, HttpServletRequest request) {
         try {
+            System.out.println("produto " + produto);
             validateProdutoRequest(produto);
 
             String username = (String) request.getAttribute("username");
@@ -145,15 +164,21 @@ public class ProdutoController {
                 throw new ProdutoValidationException("O código SKU já foi cadastrado em outro produto");
             }
 
+            if(produto.getValorDeVenda() < produto.getValorDeCusto()){
+                throw new ProdutoValidationException("O valor de Venda não pode ser maior que o valor de Custo.");
+            }
+
             Produto novoProduto = new Produto();
 
             novoProduto.setNome(produto.getNome());
             novoProduto.setSku(produto.getSku());
             novoProduto.setCategoria(categoria.get());
             novoProduto.setValorDeCusto(produto.getValorDeCusto());
+            novoProduto.setValorDeVenda(produto.getValorDeVenda());
             novoProduto.setIcms(produto.getIcms());
             novoProduto.setQuantidadeEmEstoque(produto.getQuantidadeEmEstoque());
             novoProduto.setUsuario((Usuario) usuarioLogado);
+            novoProduto.setImagemDoProduto(produto.getImagemDoProduto().getBytes());
             
             var produtoCriado = this.produtoRepositorio.save(novoProduto);
 
@@ -200,6 +225,11 @@ public class ProdutoController {
             if(!usuarioLogado.getIsAdmin() && (produto.getValorDeCusto() != 0.0 || produto.getIcms() != 0.0)){
                 throw new ProdutoValidationException("O usuário autenticado não possui permissão para alterar o Valor do Custo ou ICMS.");
             }
+
+            if(produto.getValorDeVenda() < produto.getValorDeCusto()){
+                throw new ProdutoValidationException("O valor de Venda não pode ser maior que o valor de Custo.");
+            }
+
             Optional<Categoria> categoria = null;
             
             if(produto.getCategoriaId() != null){
@@ -220,6 +250,10 @@ public class ProdutoController {
 
             if(produto.getValorDeCusto() != null){
                 produtoAtualizado.setValorDeCusto(produto.getValorDeCusto());
+            }
+
+            if(produto.getValorDeVenda() != null){
+                produtoAtualizado.setValorDeVenda(produto.getValorDeVenda());
             }
 
             if(produto.getQuantidadeEmEstoque() != null){

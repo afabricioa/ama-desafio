@@ -7,6 +7,9 @@ import java.util.List;
 import org.hibernate.annotations.CreationTimestamp;
 import org.springframework.data.jpa.domain.Specification;
 
+import br.com.fabricio.ama.amadesafio.dtos.CategoriaRequestDTO;
+import br.com.fabricio.ama.amadesafio.dtos.ProdutoResponseDTO;
+import br.com.fabricio.ama.amadesafio.dtos.UsuarioResponseDTO;
 import io.swagger.v3.oas.annotations.Hidden;
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
@@ -14,6 +17,7 @@ import jakarta.persistence.GeneratedValue;
 import jakarta.persistence.GenerationType;
 import jakarta.persistence.Id;
 import jakarta.persistence.JoinColumn;
+import jakarta.persistence.Lob;
 import jakarta.persistence.ManyToOne;
 import jakarta.persistence.criteria.CriteriaBuilder;
 import jakarta.persistence.criteria.CriteriaQuery;
@@ -48,9 +52,13 @@ public class Produto {
 
     private Float valorDeCusto = (float) 0;
 
+    private Float valorDeVenda = (float) 0;
+
     private Float icms = (float) 0;
 
-    private String imagemDoProduto;
+    @Lob
+    @Column(length = 1048576)
+    private byte[] imagemDoProduto;
 
     @CreationTimestamp
     @Hidden
@@ -100,5 +108,32 @@ public class Produto {
                 return criteriaBuilder.and(predicates.toArray(new Predicate[predicates.size()]));
             }
         };
+    }
+
+    public ProdutoResponseDTO toDto(Produto produto){
+        System.out.println(nome + " " + imagemDoProduto);
+        ProdutoResponseDTO produtoDTO = new ProdutoResponseDTO();
+        produtoDTO.setCategoria(new CategoriaRequestDTO(produto.getCategoria().getNome(), produto.getCategoria().getTipo()));
+        produtoDTO.setIcms(icms);
+        produtoDTO.setNome(nome);
+        produtoDTO.setQuantidadeEmEstoque(quantidadeEmEstoque);
+        produtoDTO.setSku(sku);
+        produtoDTO.setValorDeCusto(valorDeCusto);
+        produtoDTO.setValorDeVenda(valorDeVenda);
+        produtoDTO.setImagemDoProduto(imagemDoProduto != null ? 
+                                    imagemDoProduto.toString().substring(0, 5) : 
+                                    null);
+        List<String> roles = new ArrayList<>();
+        if(produto.getUsuario().getIsAdmin()){
+            roles.add("ADMIN");
+            roles.add("ESTOQUISTA");
+        } 
+        else {
+             roles.add("ESTOQUISTA");
+        }
+        
+        produtoDTO.setUsuario(new UsuarioResponseDTO(produto.getUsuario().getNome(), produto.getUsuario().getUsername(), roles));
+        
+        return produtoDTO;
     }
 }

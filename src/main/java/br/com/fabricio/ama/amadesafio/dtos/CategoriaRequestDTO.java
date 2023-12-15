@@ -11,4 +11,9 @@ public class CategoriaRequestDTO {
 
     @Enumerated(EnumType.STRING)
     private TipoCategoria tipo;
+
+    public CategoriaRequestDTO(String nome, TipoCategoria tipo) {
+        this.nome = nome;
+        this.tipo = tipo;
+    }
 }
