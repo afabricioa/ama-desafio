@@ -2,6 +2,9 @@ package br.com.fabricio.ama.amadesafio.controller;
 
 import br.com.fabricio.ama.amadesafio.dtos.ProdutoRequestDTO;
 import br.com.fabricio.ama.amadesafio.dtos.ProdutoResponseDTO;
+import br.com.fabricio.ama.amadesafio.dtos.ProdutoUpdateRequestDTO;
+import br.com.fabricio.ama.amadesafio.dtos.UsuarioResponseDTO;
+import br.com.fabricio.ama.amadesafio.dtos.ValorAgregadoDTO;
 import br.com.fabricio.ama.amadesafio.exceptions.CategoriaNotFoundException;
 import br.com.fabricio.ama.amadesafio.exceptions.ProdutoValidationException;
 import br.com.fabricio.ama.amadesafio.exceptions.UsuarioNotFoundException;
@@ -11,6 +14,8 @@ import br.com.fabricio.ama.amadesafio.models.Usuario;
 import br.com.fabricio.ama.amadesafio.repositories.ICategoriaRepositorio;
 import br.com.fabricio.ama.amadesafio.repositories.IProdutoRepositorio;
 import br.com.fabricio.ama.amadesafio.repositories.IUsuarioRepositorio;
+import br.com.fabricio.ama.amadesafio.services.FilterCamposService;
+import br.com.fabricio.ama.amadesafio.services.ProdutoService;
 import br.com.fabricio.ama.amadesafio.utils.TipoCategoria;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.Parameter;
@@ -26,12 +31,14 @@ import jakarta.servlet.http.HttpServletRequest;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
+import java.util.Set;
 
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.data.domain.Pageable;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
+import org.springframework.http.converter.json.MappingJacksonValue;
 import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
@@ -42,12 +49,8 @@ import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
-import org.springframework.web.bind.annotation.RequestPart;
 import org.springframework.web.bind.annotation.RestController;
-import org.springframework.web.multipart.MultipartFile;
 import org.springframework.web.bind.annotation.PutMapping;
-
-
 
 @RestController
 @RequestMapping("/produtos")
@@ -62,6 +65,9 @@ public class ProdutoController {
 
     @Autowired
     private ICategoriaRepositorio categoriaRepositorio;
+
+    @Autowired
+    ProdutoService produtoService;
 
     @Operation(
         security = {@SecurityRequirement(name = "bearer-key")}, 
@@ -99,29 +105,32 @@ public class ProdutoController {
                         ) {
        
         try {
-            Optional<Categoria> categoria = null;
+            String username = (String) request.getAttribute("username");
+            Usuario usuarioLogado = (Usuario) this.usuarioRepositorio.findByUsername(username);
 
-            UserDetails usuario = this.usuarioRepositorio.findByUsername(filtroUsuario);
-
-            if(filtroUsuario != null && usuario == null){
-                throw new UsuarioNotFoundException("Usuário não cadastrado no sistema");
-            } 
-
-            if(filtroCategoria != null){
-                TipoCategoria tipoCategoria = TipoCategoria.valueOf(filtroCategoria.toUpperCase());
-                categoria = this.categoriaRepositorio.findByTipo(tipoCategoria);
-                
-                if(categoria.isEmpty()){
-                    throw new CategoriaNotFoundException("Categoria não cadastrada no sistema");
-                }
-            }
+            List<ProdutoResponseDTO> produtosDTO = produtoService.buscarProdutos(
+                                                    filtroUsuario, 
+                                                    filtroCategoria, 
+                                                    filtroNome, 
+                                                    filtroSku, 
+                                                    filtroIcms, 
+                                                    filtroCusto, 
+                                                    filtroEstoque, 
+                                                    pageable);
             
-            List<Produto> produtos = this.produtoRepositorio.findProdutoByCriteria(filtroNome, categoria != null ? categoria.get() : null, filtroSku, filtroIcms, filtroCusto, filtroEstoque, (Usuario) usuario, pageable);
-            List<ProdutoResponseDTO> produtosDTO = new ArrayList<>();
-            produtos.forEach(produto -> {
-                produtosDTO.add(produto.toDto(produto));
-            });
-            return ResponseEntity.status(200).body(produtosDTO);
+            Set<String> campos = Set.of();
+            
+            if(!usuarioLogado.getIsAdmin()){
+                campos = produtoService.getCamposBloqueados();
+            }
+
+            MappingJacksonValue jacksonValue = FilterCamposService.filtroCampos(
+                                                campos, 
+                                                "produtoFilter", 
+                                                produtosDTO);
+            
+            return ResponseEntity.status(200).body(jacksonValue);
+
         } catch (UsuarioNotFoundException e) {
             return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(e.getMessage());
         } catch (CategoriaNotFoundException e) {
@@ -149,38 +158,9 @@ public class ProdutoController {
     @PostMapping(consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
     public ResponseEntity create(@ModelAttribute ProdutoRequestDTO produto, HttpServletRequest request) {
         try {
-            System.out.println("produto " + produto);
-            validateProdutoRequest(produto);
-
             String username = (String) request.getAttribute("username");
-            UserDetails usuarioLogado = this.usuarioRepositorio.findByUsername(username);
-            Optional<Categoria> categoria = this.categoriaRepositorio.findById(produto.getCategoriaId());
 
-            if(categoria.isEmpty()){
-                throw new CategoriaNotFoundException("Categoria não cadastrada no sistema");
-            }
-            Optional<Produto> produtoEncontrado = this.produtoRepositorio.findBySku(produto.getSku());
-            if(produtoEncontrado.isPresent()){
-                throw new ProdutoValidationException("O código SKU já foi cadastrado em outro produto");
-            }
-
-            if(produto.getValorDeVenda() < produto.getValorDeCusto()){
-                throw new ProdutoValidationException("O valor de Venda não pode ser maior que o valor de Custo.");
-            }
-
-            Produto novoProduto = new Produto();
-
-            novoProduto.setNome(produto.getNome());
-            novoProduto.setSku(produto.getSku());
-            novoProduto.setCategoria(categoria.get());
-            novoProduto.setValorDeCusto(produto.getValorDeCusto());
-            novoProduto.setValorDeVenda(produto.getValorDeVenda());
-            novoProduto.setIcms(produto.getIcms());
-            novoProduto.setQuantidadeEmEstoque(produto.getQuantidadeEmEstoque());
-            novoProduto.setUsuario((Usuario) usuarioLogado);
-            novoProduto.setImagemDoProduto(produto.getImagemDoProduto().getBytes());
-            
-            var produtoCriado = this.produtoRepositorio.save(novoProduto);
+            var produtoCriado = produtoService.cadastrarProduto(produto, username);
 
             return ResponseEntity.status(HttpStatus.CREATED).body(produtoCriado);
         } catch (ProdutoValidationException e) {
@@ -205,68 +185,13 @@ public class ProdutoController {
         @ApiResponse(responseCode = "500", description = "Ocorreu um erro interno, verifique os logs!", content = @Content()),
     })
     @PutMapping("/{id}")
-    public ResponseEntity update(@PathVariable Integer id, @RequestBody ProdutoRequestDTO produto, HttpServletRequest request){
+    public ResponseEntity update(@PathVariable Integer id, @RequestBody ProdutoUpdateRequestDTO produto, HttpServletRequest request){
         try {
-            Optional<Produto> produtoExistente = this.produtoRepositorio.findById(id);
-            if (produtoExistente.isEmpty()) {
-                throw new ProdutoValidationException("Produto não encontrado");
-            }
-
-            Produto produtoAtualizado = produtoExistente.get();
-
-            Optional<Produto> produtoEncontrado = this.produtoRepositorio.findBySku(produto.getSku());
-            if(produtoEncontrado.isPresent() && produtoEncontrado.get().getId() != produtoAtualizado.getId()){
-                throw new ProdutoValidationException("O código SKU já foi cadastrado em outro produto");
-            }
-
             String username = (String) request.getAttribute("username");
-            Usuario usuarioLogado = (Usuario) this.usuarioRepositorio.findByUsername(username);
-            System.out.println("produto "  + produto);
-            if(!usuarioLogado.getIsAdmin() && (produto.getValorDeCusto() != 0.0 || produto.getIcms() != 0.0)){
-                throw new ProdutoValidationException("O usuário autenticado não possui permissão para alterar o Valor do Custo ou ICMS.");
-            }
 
-            if(produto.getValorDeVenda() < produto.getValorDeCusto()){
-                throw new ProdutoValidationException("O valor de Venda não pode ser maior que o valor de Custo.");
-            }
+            var produtoAtualizado = produtoService.atualizarProduto(id, produto, username);
 
-            Optional<Categoria> categoria = null;
-            
-            if(produto.getCategoriaId() != null){
-                categoria = this.categoriaRepositorio.findById(produto.getCategoriaId());
-
-                if(categoria.isPresent()){
-                    produtoAtualizado.setCategoria(categoria.get());
-                }
-            }
-
-            if(produto.getNome() != null && produto.getNome() != ""){
-                produtoAtualizado.setNome(produto.getNome());
-            }
-
-            if(produto.getSku() != null && produto.getSku() != ""){
-                produtoAtualizado.setSku(produto.getSku());
-            }
-
-            if(produto.getValorDeCusto() != null){
-                produtoAtualizado.setValorDeCusto(produto.getValorDeCusto());
-            }
-
-            if(produto.getValorDeVenda() != null){
-                produtoAtualizado.setValorDeVenda(produto.getValorDeVenda());
-            }
-
-            if(produto.getQuantidadeEmEstoque() != null){
-                produtoAtualizado.setQuantidadeEmEstoque(produto.getQuantidadeEmEstoque());
-            }
-
-            if(produto.getIcms() != null){
-                produtoAtualizado.setIcms(produto.getIcms());
-            }
-                        
-            var updatedProduct = this.produtoRepositorio.save(produtoAtualizado);
-
-            return ResponseEntity.status(HttpStatus.CREATED).body(updatedProduct);
+            return ResponseEntity.status(HttpStatus.CREATED).body(produtoAtualizado);
         } catch (ProdutoValidationException e) {
             return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(e.getMessage());
         } catch (CategoriaNotFoundException e) {
@@ -290,18 +215,9 @@ public class ProdutoController {
     @PatchMapping("/{id}")
     public ResponseEntity inativarProduto(@PathVariable Integer id, HttpServletRequest request){
         try{
-            Optional<Produto> produtoExistente = this.produtoRepositorio.findById(id);
-            if (produtoExistente.isEmpty()) {
-                throw new ProdutoValidationException("Produto não encontrado");
-            }
+            var produtoAtualizado = produtoService.inativarProduto(id);
 
-            Produto produtoInativado = produtoExistente.get();
-
-            produtoInativado.setAtivo(false);
-
-            var updatedProduct = this.produtoRepositorio.save(produtoInativado);
-
-            return ResponseEntity.status(HttpStatus.OK).body(updatedProduct);
+            return ResponseEntity.status(HttpStatus.OK).body(produtoAtualizado);
         } catch (ProdutoValidationException e) {
             return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(e.getMessage());
         } catch (Exception e) {
@@ -323,12 +239,7 @@ public class ProdutoController {
     @DeleteMapping("/{id}")
     public ResponseEntity deletarProduto(@PathVariable Integer id, HttpServletRequest request){
         try{
-            Optional<Produto> produtoExistente = this.produtoRepositorio.findById(id);
-            if (produtoExistente.isEmpty()) {
-                throw new ProdutoValidationException("Produto não encontrado");
-            }
-
-            this.produtoRepositorio.delete(produtoExistente.get());
+            produtoService.deletarProduto(id);
 
             return ResponseEntity.status(HttpStatus.OK).body("Produto excluído permanentemente");
         } catch (ProdutoValidationException e) {
@@ -338,24 +249,102 @@ public class ProdutoController {
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body("Ocorreu um erro interno no servidor.");
         }
     }
-    
-    private void validateProdutoRequest(ProdutoRequestDTO produto) {
-        if (produto.getIcms() < 0 || produto.getIcms() == null) {
-            throw new ProdutoValidationException("ICMS deve ser um valor positivo.");
-        }
 
-        if (produto.getValorDeCusto() < 0 || produto.getValorDeCusto() == null) {
-            throw new ProdutoValidationException("Valor de custo deve ser um valor positivo.");
-        }
-        
-        if (produto.getQuantidadeEmEstoque() < 0 || produto.getQuantidadeEmEstoque() == null) {
-            throw new ProdutoValidationException("Valor de quantidade em estoque deve ser um valor positivo.");
-        }
+    @Operation(
+        security = {@SecurityRequirement(name = "bearer-key")}, 
+        summary = "Buscar Valor Agregado",
+        method = "GET"
+    )
+    @ApiResponses(value = {
+        @ApiResponse(responseCode = "200", description = "Sucesso!", content = @Content()),
+        @ApiResponse(responseCode = "400", description = "Requisição incorreta", content = @Content()),
+        @ApiResponse(responseCode = "401", description = "Requisição não autorizada!", content = @Content()),       
+        @ApiResponse(responseCode = "500", description = "Ocorreu um erro interno, verifique os logs!", content = @Content()),
+    })
+    @Parameters({
+        @Parameter(name = "nome", description = "Filtrar por nome do produto", schema = @Schema(title = "nome", type = "string")),
+        @Parameter(name = "filtroCategoria", description = "Filtrar por Categoria", schema = @Schema(title = "categoria", type = "string", allowableValues = {"NORMAL", "ESPECIAL", "PERSONALIZADO"})),
+        @Parameter(name = "sku", description = "Filtrar código do produto(SKU)", schema = @Schema(title = "sku", type = "string")),
+        @Parameter(name = "icms", description = "Filtrar por valor mínimo ICMS", schema = @Schema(title = "icms", type = "float")),
+        @Parameter(name = "valorDeCusto", description = "Filtrar por valor mínimo de Custo", schema = @Schema(title = "valorDeCusto", type = "float")),
+        @Parameter(name = "valorDeVenda", description = "Filtrar por valor mínimo de Venda", schema = @Schema(title = "valorDeVenda", type = "float")),
+        @Parameter(name = "quantidadeEmEstoque", description = "Filtrar por valor mínimo em Estoque", schema = @Schema(title = "quantidadeEmEstoque", type = "float")),
+        @Parameter(name = "filtroUsuario", description =  "Filtrar por login do usuário que cadastrou o produto", schema = @Schema(title = "usuario", type = "string"))
+    })
+    @GetMapping("/getValorAgregado")
+    public ResponseEntity getValorAgregado(
+                            HttpServletRequest request,
+                            @RequestParam(name = "nome", required = false) String filtroNome,
+                            @RequestParam(name = "filtroCategoria", required = false) String filtroCategoria,
+                            @RequestParam(name = "sku", required = false) String filtroSku,
+                            @RequestParam(name = "icms", required = false) Float filtroIcms,
+                            @RequestParam(name = "valorDeCusto", required = false) Float filtroCusto,
+                            @RequestParam(name = "valorDeVenda", required = false) Float filtroVenda,
+                            @RequestParam(name = "quantidadeEmEstoque", required = false) Integer filtroEstoque,
+                            @RequestParam(name = "filtroUsuario", required = false) String filtroUsuario,
+                            Pageable pageable
+                        ) {
+       
+        try {
+            List<ValorAgregadoDTO> produtoValorAgregadoDTO = produtoService.buscaValoresAgregados(
+                                                    filtroUsuario, 
+                                                    filtroCategoria, 
+                                                    filtroNome, 
+                                                    filtroSku, 
+                                                    filtroIcms, 
+                                                    filtroCusto, 
+                                                    filtroEstoque, 
+                                                    pageable);
 
-        if (produto.getNome().trim() == "" || produto.getNome() == null) {
-            throw new ProdutoValidationException("O campo 'nome' não pode ser nulo ou em branco.");
-        }
+            return ResponseEntity.status(200).body(produtoValorAgregadoDTO);
 
+        } catch (UsuarioNotFoundException e) {
+            return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(e.getMessage());
+        } catch (CategoriaNotFoundException e) {
+            return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(e.getMessage());
+        } catch (Exception e) {
+            System.out.println(e.getCause() + " " + e.getMessage());
+            if(e.getCause() instanceof IllegalArgumentException){
+                return ResponseEntity.status(HttpStatus.BAD_REQUEST).body("Escolha um atributo de ordenação correto (nome, sku, valorDeCusto, icms, quantidadeEmEstoque).");
+            }
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body("Ocorreu um erro interno no servidor.");
+        }
     }
-    
+
+    @Operation(
+        security = {@SecurityRequirement(name = "bearer-key")}, 
+        summary = "Gerencia Visualização de campos do Produto",
+        method = "POST"
+    )
+    @ApiResponses(value = {
+        @ApiResponse(responseCode = "200", description = "Sucesso!", content = @Content()),
+        @ApiResponse(responseCode = "400", description = "Requisição incorreta", content = @Content()),
+        @ApiResponse(responseCode = "401", description = "Requisição não autorizada!", content = @Content()),       
+        @ApiResponse(responseCode = "500", description = "Ocorreu um erro interno, verifique os logs!", content = @Content()),
+    })
+    @Parameters({
+        @Parameter(name = "campos", description = "Digite os campos nesse formato 'icms, valorDeCusto' separado por vírgula.", schema = @Schema(title = "campos", type = "string")),
+    })
+    @PostMapping("/gerenciaVisualizacaoProduto")
+    public ResponseEntity gerenciaVisualizacaoProduto(HttpServletRequest request, @RequestParam(name = "campos", required = false) String campos) {
+        try {
+            String username = (String) request.getAttribute("username");
+            Usuario usuarioLogado = (Usuario) this.usuarioRepositorio.findByUsername(username);
+
+            if(!usuarioLogado.getIsAdmin()){
+                throw new ProdutoValidationException("O usuário não tem permissão para realizar essa requisição");
+            }
+
+            produtoService.gerenciarCamposBloqueados(campos);
+
+            return ResponseEntity.status(200).body("Visualização alterada com sucesso");
+        } catch (ProdutoValidationException e) {
+            return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(e.getMessage());
+        } catch (UsuarioNotFoundException e) {
+            return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(e.getMessage());
+        } catch (Exception e) {
+            System.out.println(e.getCause() + " " + e.getMessage());
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body("Ocorreu um erro interno no servidor.");
+        }
+    }
 }

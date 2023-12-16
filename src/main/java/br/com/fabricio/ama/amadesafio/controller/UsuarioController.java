@@ -26,7 +26,6 @@ public class UsuarioController {
     @Operation(security = {@SecurityRequirement(name = "bearer-key")})
     @GetMapping
     public List<Usuario> getAllUsers(){
-        System.out.println("uuarios");
         return this.usuarioRepositorio.findAll();
     }
 

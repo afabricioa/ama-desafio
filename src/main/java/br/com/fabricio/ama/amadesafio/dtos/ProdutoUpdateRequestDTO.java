@@ -1,12 +1,9 @@
 package br.com.fabricio.ama.amadesafio.dtos;
 
-import org.springframework.web.multipart.MultipartFile;
-
 import lombok.Data;
 
 @Data
-public class ProdutoRequestDTO {
-  
+public class ProdutoUpdateRequestDTO {
     private String nome;
 
     private String sku;
@@ -18,8 +15,6 @@ public class ProdutoRequestDTO {
     private Float valorDeVenda;
 
     private Float icms;
-
-    private MultipartFile imagemDoProduto;
 
     private Integer quantidadeEmEstoque;
 }

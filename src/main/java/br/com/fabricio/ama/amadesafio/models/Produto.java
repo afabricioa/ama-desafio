@@ -110,10 +110,10 @@ public class Produto {
         };
     }
 
-    public ProdutoResponseDTO toDto(Produto produto){
-        System.out.println(nome + " " + imagemDoProduto);
+    public ProdutoResponseDTO toDto(){
         ProdutoResponseDTO produtoDTO = new ProdutoResponseDTO();
-        produtoDTO.setCategoria(new CategoriaRequestDTO(produto.getCategoria().getNome(), produto.getCategoria().getTipo()));
+        produtoDTO.setId(id);
+        produtoDTO.setCategoria(new CategoriaRequestDTO(categoria.getNome(), categoria.getTipo()));
         produtoDTO.setIcms(icms);
         produtoDTO.setNome(nome);
         produtoDTO.setQuantidadeEmEstoque(quantidadeEmEstoque);
@@ -122,17 +122,8 @@ public class Produto {
         produtoDTO.setValorDeVenda(valorDeVenda);
         produtoDTO.setImagemDoProduto(imagemDoProduto != null ? 
                                     imagemDoProduto.toString().substring(0, 5) : 
-                                    null);
-        List<String> roles = new ArrayList<>();
-        if(produto.getUsuario().getIsAdmin()){
-            roles.add("ADMIN");
-            roles.add("ESTOQUISTA");
-        } 
-        else {
-             roles.add("ESTOQUISTA");
-        }
-        
-        produtoDTO.setUsuario(new UsuarioResponseDTO(produto.getUsuario().getNome(), produto.getUsuario().getUsername(), roles));
+                                    null);        
+        produtoDTO.setUsuario(new UsuarioResponseDTO(usuario));
         
         return produtoDTO;
     }

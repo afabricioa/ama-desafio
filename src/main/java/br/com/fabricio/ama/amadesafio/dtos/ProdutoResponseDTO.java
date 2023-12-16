@@ -1,10 +1,15 @@
 package br.com.fabricio.ama.amadesafio.dtos;
 
+import com.fasterxml.jackson.annotation.JsonFilter;
+
 import io.swagger.v3.oas.annotations.media.Schema;
 import lombok.Data;
 
 @Data
+@JsonFilter("produtoFilter")
 public class ProdutoResponseDTO {
+    private Integer id;
+
     private String nome;
 
     private String sku;
