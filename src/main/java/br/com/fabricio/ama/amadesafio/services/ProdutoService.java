@@ -24,9 +24,7 @@ import br.com.fabricio.ama.amadesafio.exceptions.UsuarioNotFoundException;
 import br.com.fabricio.ama.amadesafio.models.Categoria;
 import br.com.fabricio.ama.amadesafio.models.Produto;
 import br.com.fabricio.ama.amadesafio.models.Usuario;
-import br.com.fabricio.ama.amadesafio.repositories.ICategoriaRepositorio;
-import br.com.fabricio.ama.amadesafio.repositories.IProdutoRepositorio;
-import br.com.fabricio.ama.amadesafio.repositories.IUsuarioRepositorio;
+import br.com.fabricio.ama.amadesafio.repositories.*;
 import br.com.fabricio.ama.amadesafio.utils.TipoCategoria;
 
 @Service
@@ -66,7 +64,7 @@ public class ProdutoService {
         produtos.forEach(produto -> {
             produtosDTO.add(produto.toDto());
         });
-
+        System.out.println("produtos " + produtosDTO);
         return produtosDTO;
     }
 

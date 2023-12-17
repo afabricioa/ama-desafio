@@ -1,22 +1,12 @@
 package br.com.fabricio.ama.amadesafio.controller;
 
-import br.com.fabricio.ama.amadesafio.dtos.ProdutoRequestDTO;
-import br.com.fabricio.ama.amadesafio.dtos.ProdutoResponseDTO;
-import br.com.fabricio.ama.amadesafio.dtos.ProdutoUpdateRequestDTO;
-import br.com.fabricio.ama.amadesafio.dtos.UsuarioResponseDTO;
-import br.com.fabricio.ama.amadesafio.dtos.ValorAgregadoDTO;
-import br.com.fabricio.ama.amadesafio.exceptions.CategoriaNotFoundException;
-import br.com.fabricio.ama.amadesafio.exceptions.ProdutoValidationException;
-import br.com.fabricio.ama.amadesafio.exceptions.UsuarioNotFoundException;
-import br.com.fabricio.ama.amadesafio.models.Categoria;
-import br.com.fabricio.ama.amadesafio.models.Produto;
+import br.com.fabricio.ama.amadesafio.dtos.*;
+import br.com.fabricio.ama.amadesafio.exceptions.*;
 import br.com.fabricio.ama.amadesafio.models.Usuario;
-import br.com.fabricio.ama.amadesafio.repositories.ICategoriaRepositorio;
-import br.com.fabricio.ama.amadesafio.repositories.IProdutoRepositorio;
-import br.com.fabricio.ama.amadesafio.repositories.IUsuarioRepositorio;
+import br.com.fabricio.ama.amadesafio.repositories.*;
 import br.com.fabricio.ama.amadesafio.services.FilterCamposService;
 import br.com.fabricio.ama.amadesafio.services.ProdutoService;
-import br.com.fabricio.ama.amadesafio.utils.TipoCategoria;
+
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.Parameter;
 import io.swagger.v3.oas.annotations.Parameters;
@@ -28,9 +18,7 @@ import io.swagger.v3.oas.annotations.security.SecurityRequirement;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.servlet.http.HttpServletRequest;
 
-import java.util.ArrayList;
 import java.util.List;
-import java.util.Optional;
 import java.util.Set;
 
 import org.springframework.beans.factory.annotation.Autowired;
@@ -39,7 +27,6 @@ import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.http.converter.json.MappingJacksonValue;
-import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.ModelAttribute;

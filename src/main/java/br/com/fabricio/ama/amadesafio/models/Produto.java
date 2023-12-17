@@ -113,7 +113,7 @@ public class Produto {
     public ProdutoResponseDTO toDto(){
         ProdutoResponseDTO produtoDTO = new ProdutoResponseDTO();
         produtoDTO.setId(id);
-        produtoDTO.setCategoria(new CategoriaRequestDTO(categoria.getNome(), categoria.getTipo()));
+        produtoDTO.setCategoria(new CategoriaRequestDTO(categoria.getId(), categoria.getNome(), categoria.getTipo()));
         produtoDTO.setIcms(icms);
         produtoDTO.setNome(nome);
         produtoDTO.setQuantidadeEmEstoque(quantidadeEmEstoque);

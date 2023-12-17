@@ -7,12 +7,15 @@ import lombok.Data;
 
 @Data
 public class CategoriaRequestDTO {
+    private Integer id;
+    
     private String nome;
 
     @Enumerated(EnumType.STRING)
     private TipoCategoria tipo;
 
-    public CategoriaRequestDTO(String nome, TipoCategoria tipo) {
+    public CategoriaRequestDTO(Integer id, String nome, TipoCategoria tipo) {
+        this.id = id;
         this.nome = nome;
         this.tipo = tipo;
     }
