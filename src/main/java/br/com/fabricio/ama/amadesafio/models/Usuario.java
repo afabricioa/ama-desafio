@@ -19,7 +19,7 @@ import lombok.Data;
 @Entity
 public class Usuario implements UserDetails{
     @Id
-    @GeneratedValue(strategy=GenerationType.AUTO)
+    @GeneratedValue(strategy=GenerationType.SEQUENCE)
     private Integer id;
 
     @Column(unique = true)

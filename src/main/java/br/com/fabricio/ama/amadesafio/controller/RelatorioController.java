@@ -5,7 +5,6 @@ import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
 import br.com.fabricio.ama.amadesafio.dtos.ProdutoResponseDTO;
-import br.com.fabricio.ama.amadesafio.models.Produto;
 import br.com.fabricio.ama.amadesafio.services.ProdutoService;
 import br.com.fabricio.ama.amadesafio.services.RelatorioService;
 import br.com.fabricio.ama.amadesafio.utils.GeradorCsv;
@@ -31,8 +30,6 @@ import org.springframework.http.HttpHeaders;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.GetMapping;
-import org.springframework.web.bind.annotation.RequestBody;
-
 
 @RestController
 @RequestMapping("/relatorio")
@@ -57,8 +54,8 @@ public class RelatorioController {
         @ApiResponse(responseCode = "500", description = "Ocorreu um erro interno, verifique os logs!", content = @Content()),
     })
     @Parameters({
-        @Parameter(name = "campos", description = "Digite os campos nesse formato 'icms, valorDeCusto' separado por vírgula.", schema = @Schema(title = "campos", type = "string")),
-        @Parameter(name = "tipoArquivo", description = "Selecione o tipo de arquivo.", schema = @Schema(title = "tipoArquivo", type = "string", allowableValues = {"CSV", "XLSX"})),
+        @Parameter(name = "campos", description = "Digite os campos nesse formato 'ID, NOME, SKU, CATEGORIA, ICMS, VALORDECUSTO, VALORDEVENDA, ESTOQUE' separado por vírgula.", schema = @Schema(title = "campos", type = "string", defaultValue = "ID, NOME, SKU, CATEGORIA, ICMS, VALORDECUSTO, VALORDEVENDA, ESTOQUE")),
+        @Parameter(name = "tipoArquivo", description = "Selecione o tipo de arquivo.", schema = @Schema(title = "tipoArquivo", type = "string", allowableValues = {"CSV", "XLSX"}, defaultValue = "CSV")),
         @Parameter(name = "nome", description = "Filtrar por nome do produto", schema = @Schema(title = "nome", type = "string")),
         @Parameter(name = "filtroCategoria", description = "Filtrar por Categoria", schema = @Schema(title = "categoria", type = "string", allowableValues = {"NORMAL", "ESPECIAL", "PERSONALIZADO"})),
         @Parameter(name = "sku", description = "Filtrar código do produto(SKU)", schema = @Schema(title = "sku", type = "string")),
@@ -90,7 +87,9 @@ public class RelatorioController {
         if(tipoArquivo.equals("XLSX")){
             response.setContentType("application/octet-stream");
 
-            GeradorXlsx geradorXlsx = new GeradorXlsx(produtos);
+            List<String> listaCampos = relatorioService.extraiCampos(campos);
+
+            GeradorXlsx geradorXlsx = new GeradorXlsx(produtos, listaCampos);
 
             String headerKey = "Content-Disposition";
             String headerValue = "attachment; filename=produtos.xlsx";

@@ -43,16 +43,10 @@ import org.springframework.web.bind.annotation.PutMapping;
 @RequestMapping("/produtos")
 @Tag(name = "ProdutoController")
 public class ProdutoController {
-    
-    @Autowired
-    private IProdutoRepositorio produtoRepositorio;
 
     @Autowired
     private IUsuarioRepositorio usuarioRepositorio;
-
-    @Autowired
-    private ICategoriaRepositorio categoriaRepositorio;
-
+    
     @Autowired
     ProdutoService produtoService;
 

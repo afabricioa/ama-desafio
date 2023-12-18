@@ -32,7 +32,7 @@ import lombok.Data;
 public class Produto {
     
     @Id
-    @GeneratedValue(strategy=GenerationType.AUTO)
+    @GeneratedValue(strategy=GenerationType.SEQUENCE)
     @Hidden
     private Integer id;
 

@@ -3,13 +3,12 @@ package br.com.fabricio.ama.amadesafio.utils;
 import java.io.IOException;
 import java.util.List;
 
-import org.apache.poi.hssf.usermodel.HSSFWorkbook;
 import org.apache.poi.ss.usermodel.Cell;
 import org.apache.poi.ss.usermodel.CellStyle;
-import org.apache.poi.ss.usermodel.Font;
 import org.apache.poi.ss.usermodel.Row;
-import org.apache.poi.ss.usermodel.Sheet;
-import org.apache.poi.ss.usermodel.Workbook;
+import org.apache.poi.xssf.usermodel.XSSFFont;
+import org.apache.poi.xssf.usermodel.XSSFSheet;
+import org.apache.poi.xssf.usermodel.XSSFWorkbook;
 import org.springframework.stereotype.Component;
 
 import br.com.fabricio.ama.amadesafio.dtos.ProdutoResponseDTO;
@@ -21,26 +20,28 @@ import lombok.Data;
 @Component
 public class GeradorXlsx {
     private List<ProdutoResponseDTO> listaProdutos;
-    private Workbook workbook;
-    private Sheet sheet;
+    private XSSFWorkbook workbook;
+    private XSSFSheet sheet;
+    List<String> listaCampos;
 
-    public GeradorXlsx(List<ProdutoResponseDTO> listaProdutos){
+    public GeradorXlsx(List<ProdutoResponseDTO> listaProdutos, List<String> listaCampos){
         this.listaProdutos = listaProdutos;
-        this.workbook = new HSSFWorkbook();
+        this.workbook = new XSSFWorkbook();
+        this.listaCampos = listaCampos;
     }
 
     private void gerarCabecalho(){
         this.setSheet(this.workbook.createSheet("Produto"));
         Row row = this.sheet.createRow(0);
         CellStyle style = this.workbook.createCellStyle();
-        Font font = this.workbook.createFont();
+        XSSFFont font = this.workbook.createFont();
         font.setBold(true);
         font.setFontHeight((short) 16);
         style.setFont(font);
-        criarCelula(row, 0, "ID", style);
-        criarCelula(row, 1, "Nome", style);
-        criarCelula(row, 2, "SKU", style);
-        criarCelula(row, 3, "Valor", style);
+        for (int i = 0; i < listaCampos.size(); i++) {
+            String campo = listaCampos.get(i);
+            criarCelula(row, i, campo, style);
+        }
     }
 
     private void criarCelula(Row row, Integer contadorColuna, Object valorCelula, CellStyle style){
@@ -61,18 +62,38 @@ public class GeradorXlsx {
     private void write(){
         Integer rowCount = 1;
         CellStyle style = this.workbook.createCellStyle();
-        Font font = this.workbook.createFont();
+        XSSFFont font = this.workbook.createFont();
         font.setFontHeight((short) 14);
         style.setFont(font);
 
         for(ProdutoResponseDTO record: listaProdutos){
-            System.out.println("record " + record);
             Row row = this.sheet.createRow(rowCount++);
             Integer contador = 0;
-            criarCelula(row, contador++, record.getId(), style);
-            criarCelula(row, contador++, record.getNome(), style);
-            criarCelula(row, contador++, record.getSku(), style);
-            criarCelula(row, contador++, record.getValorDeCusto(), style);
+            if(listaCampos.contains("ID")){
+                criarCelula(row, contador++, record.getId(), style);
+            }
+            if(listaCampos.contains("Nome")) {
+                criarCelula(row, contador++, record.getId(), style);
+            }
+            if(listaCampos.contains("Sku")) {
+                criarCelula(row, contador++, record.getSku(), style);
+            }
+            if(listaCampos.contains("ID Categoria")) {
+                criarCelula(row, contador++, record.getCategoria().getId(), style);
+            }
+            if(listaCampos.contains("Icms")) {
+                criarCelula(row, contador++, record.getIcms(), style);
+            }
+            if(listaCampos.contains("Valor de Custo")) {
+                criarCelula(row, contador++, record.getValorDeCusto(), style);
+            }
+            if(listaCampos.contains("Valor de Venda")) {
+                criarCelula(row, contador++, record.getValorDeVenda(), style);
+            }
+            if(listaCampos.contains("Quantidade em Estoque")) {
+                criarCelula(row, contador++, record.getQuantidadeEmEstoque(), style);
+            }
+        
         }
     }
 
