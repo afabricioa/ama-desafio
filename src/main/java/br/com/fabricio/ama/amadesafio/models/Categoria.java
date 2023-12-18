@@ -1,7 +1,5 @@
 package br.com.fabricio.ama.amadesafio.models;
 
-import org.hibernate.envers.Audited;
-
 import br.com.fabricio.ama.amadesafio.listeners.AuditoriaEntityListener;
 import br.com.fabricio.ama.amadesafio.utils.TipoCategoria;
 import io.swagger.v3.oas.annotations.Hidden;
@@ -19,7 +17,6 @@ import lombok.Data;
 @Data
 @Entity
 @EntityListeners(AuditoriaEntityListener.class)
-@Audited
 public class Categoria {
     @Id
     @GeneratedValue(strategy = GenerationType.SEQUENCE)
