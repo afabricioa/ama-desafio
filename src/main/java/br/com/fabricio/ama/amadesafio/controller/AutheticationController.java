@@ -4,7 +4,6 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
 import br.com.fabricio.ama.amadesafio.dtos.AutenticacaoDTO;
-import br.com.fabricio.ama.amadesafio.dtos.AutenticacaoResponseDTO;
 import br.com.fabricio.ama.amadesafio.models.Usuario;
 import br.com.fabricio.ama.amadesafio.security.TokenService;
 import io.swagger.v3.oas.annotations.Operation;

@@ -12,11 +12,9 @@ import br.com.fabricio.ama.amadesafio.models.Usuario;
 import br.com.fabricio.ama.amadesafio.services.AuditoriaService;
 import br.com.fabricio.ama.amadesafio.services.BeanService;
 import jakarta.persistence.EntityManager;
-import jakarta.persistence.PostPersist;
 import jakarta.persistence.PrePersist;
 import jakarta.persistence.PreRemove;
 import jakarta.persistence.PreUpdate;
-import jakarta.transaction.Transactional;
 
 @Component
 public class AuditoriaEntityListener {

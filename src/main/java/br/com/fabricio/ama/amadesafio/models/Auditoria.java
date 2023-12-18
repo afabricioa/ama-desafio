@@ -3,10 +3,6 @@ package br.com.fabricio.ama.amadesafio.models;
 import java.time.LocalDateTime;
 
 import org.hibernate.annotations.CreationTimestamp;
-import org.springframework.data.annotation.CreatedBy;
-import org.springframework.data.annotation.CreatedDate;
-import org.springframework.data.annotation.LastModifiedBy;
-import org.springframework.data.annotation.LastModifiedDate;
 
 import jakarta.persistence.Entity;
 import jakarta.persistence.GeneratedValue;

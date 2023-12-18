@@ -1,10 +1,8 @@
 package br.com.fabricio.ama.amadesafio.controller;
 
-import br.com.fabricio.ama.amadesafio.dtos.CategoriaRequestDTO;
 import br.com.fabricio.ama.amadesafio.exceptions.CategoriaNotFoundException;
 import br.com.fabricio.ama.amadesafio.models.Categoria;
 import br.com.fabricio.ama.amadesafio.repositories.ICategoriaRepositorio;
-import br.com.fabricio.ama.amadesafio.utils.TipoCategoria;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.media.Content;
 import io.swagger.v3.oas.annotations.responses.ApiResponse;
@@ -28,9 +26,6 @@ import org.springframework.web.bind.annotation.PutMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
-
-import com.fasterxml.jackson.databind.exc.InvalidFormatException;
-
 
 @RestController
 @RequestMapping("/categorias")
