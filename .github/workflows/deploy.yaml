@@ -34,4 +34,4 @@ jobs:
             - name: Remove existing container
               run: docker rm -f deploy-ama-desafio
             - name: Run docker container
-              run: docker run -d -p 8080:8080 -e DATABASE_USERNAME=${{secrets.DATABASE_USERNAME}} -e DATABASE_PASSWORD='${{secrets.DATABASE_PASSWORD}}'' -e DATABASE_URL=${{secrets.DATABASE_URL}} --name deploy-ama-desafio afabricioas/desafio-ama-developer:latest
+              run: docker run -d -p 8080:8080 -e DATABASE_USERNAME=${{secrets.DATABASE_USERNAME}} -e DATABASE_PASSWORD='${{secrets.DATABASE_PASSWORD}}' -e DATABASE_URL=${{secrets.DATABASE_URL}} --name deploy-ama-desafio afabricioas/desafio-ama-developer:latest
