@@ -19,7 +19,7 @@ public class ProdutoRequestDTO {
 
     private Float icms;
 
-    private MultipartFile imagemDoProduto;
+    private MultipartFile imagemDoProduto = null;
 
     private Integer quantidadeEmEstoque;
 }

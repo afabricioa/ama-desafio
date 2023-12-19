@@ -32,6 +32,14 @@ public class SecurityFilter extends OncePerRequestFilter{
         var servletPath = request.getServletPath();
         if(token != null){
             var username = tokenService.validateToken(token);
+            if(username == ""){
+                response.setCharacterEncoding("UTF-8");
+                response.setStatus(HttpServletResponse.SC_UNAUTHORIZED);
+                response.setHeader(HttpHeaders.CONTENT_TYPE, "text/plain");
+                response.getWriter().flush();
+                response.getWriter().write("Sua sessão expirou, por favor faça uma nova autenticação.");
+                return;
+            }
             UserDetails usuario = usuarioRepositorio.findByUsername(username);
             var autenticacao = new UsernamePasswordAuthenticationToken(usuario, null, usuario.getAuthorities());
             SecurityContextHolder.getContext().setAuthentication(autenticacao);

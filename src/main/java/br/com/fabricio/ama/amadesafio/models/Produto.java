@@ -5,6 +5,9 @@ import java.util.ArrayList;
 import java.util.List;
 
 import org.hibernate.annotations.CreationTimestamp;
+import org.hibernate.envers.AuditTable;
+import org.hibernate.envers.Audited;
+import org.hibernate.envers.NotAudited;
 import org.springframework.data.jpa.domain.Specification;
 
 import br.com.fabricio.ama.amadesafio.dtos.CategoriaRequestDTO;
@@ -29,10 +32,12 @@ import lombok.Data;
 
 @Data
 @Entity
+@Audited(withModifiedFlag = true)
+@AuditTable("produto_audit")
 public class Produto {
     
     @Id
-    @GeneratedValue(strategy=GenerationType.SEQUENCE)
+    @GeneratedValue(strategy=GenerationType.IDENTITY)
     @Hidden
     private Integer id;
 
@@ -58,16 +63,19 @@ public class Produto {
 
     @Lob
     @Column(length = 1048576)
+    @NotAudited
     private byte[] imagemDoProduto;
 
     @CreationTimestamp
     @Hidden
+    @NotAudited
     private LocalDateTime dataDeCadastro;
     
     private Integer quantidadeEmEstoque = 0;
 
     @ManyToOne
     @JoinColumn(name = "usuario_id")
+    @NotAudited
     private Usuario usuario;
 
     public static Specification<Produto> filtros(String nome, String sku, Integer categoriaId, Float valorDeCusto, Float icms, Float estoque){

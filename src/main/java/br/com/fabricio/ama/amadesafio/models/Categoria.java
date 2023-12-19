@@ -1,10 +1,11 @@
 package br.com.fabricio.ama.amadesafio.models;
 
-import br.com.fabricio.ama.amadesafio.listeners.AuditoriaEntityListener;
+import org.hibernate.envers.AuditTable;
+import org.hibernate.envers.Audited;
+
 import br.com.fabricio.ama.amadesafio.utils.TipoCategoria;
 import io.swagger.v3.oas.annotations.Hidden;
 import jakarta.persistence.Entity;
-import jakarta.persistence.EntityListeners;
 import jakarta.persistence.EnumType;
 import jakarta.persistence.Enumerated;
 import jakarta.persistence.GeneratedValue;
@@ -16,10 +17,11 @@ import lombok.Data;
 
 @Data
 @Entity
-@EntityListeners(AuditoriaEntityListener.class)
+@Audited(withModifiedFlag = true)
+@AuditTable("categoria_audit")
 public class Categoria {
     @Id
-    @GeneratedValue(strategy = GenerationType.SEQUENCE)
+    @GeneratedValue(strategy = GenerationType.IDENTITY)
     @Hidden
     private Integer id;
 

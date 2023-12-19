@@ -140,7 +140,7 @@ public class ProdutoController {
     public ResponseEntity create(@ModelAttribute ProdutoRequestDTO produto, HttpServletRequest request) {
         try {
             String username = (String) request.getAttribute("username");
-
+            System.out.println("produto cadastrar");
             var produtoCriado = produtoService.cadastrarProduto(produto, username);
 
             return ResponseEntity.status(HttpStatus.CREATED).body(produtoCriado);
@@ -149,6 +149,7 @@ public class ProdutoController {
         } catch (CategoriaNotFoundException e) {
             return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(e.getMessage());
         } catch (Exception e) {
+            System.out.println("mensagem: " + e.getMessage());
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body("Ocorreu um erro interno no servidor.");
         }
     }

@@ -70,7 +70,7 @@ public class ProdutoService {
 
     public Produto cadastrarProduto(ProdutoRequestDTO produto, String username) throws IOException{
         this.validateProdutoRequest(produto);
-
+        System.out.println(produto);
         UserDetails usuarioLogado = this.usuarioRepositorio.findByUsername(username);
         Optional<Categoria> categoria = this.categoriaRepositorio.findById(produto.getCategoriaId());
 
@@ -96,7 +96,9 @@ public class ProdutoService {
         novoProduto.setIcms(produto.getIcms());
         novoProduto.setQuantidadeEmEstoque(produto.getQuantidadeEmEstoque());
         novoProduto.setUsuario((Usuario) usuarioLogado);
-        novoProduto.setImagemDoProduto(produto.getImagemDoProduto().getBytes());
+        if(produto.getImagemDoProduto() != null){
+            novoProduto.setImagemDoProduto(produto.getImagemDoProduto().getBytes());
+        }
         
         return this.produtoRepositorio.save(novoProduto);
     }
