@@ -10,7 +10,7 @@ jobs:
         steps:
             - name: Checkout code
               uses: actions/checkout@v3
-              
+
             - name: Setup Java
               uses: actions/Setup-java@v3
               with:
@@ -24,3 +24,12 @@ jobs:
               run: docker build -t afabricioas/desafio-ama-developer .
             - name: Push image docker
               run: docker push afabricioas/desafio-ama-developer
+    
+    deploy:
+        needs: build
+        runs-on: self-hosted
+        steps:
+            - name: Pulls image from docker hub
+              run: docker pull afabricioas/desafio-ama-developer
+            - name: Run docker container
+              run: docker run -d -p 8080:8080 --name deploy-ama-desafio afabricioas/desafio-ama-developer:latest
