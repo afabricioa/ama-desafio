@@ -1,0 +1,14 @@
+name: Deploy API Desafio AMA Gestão
+
+on:
+    push:
+        branches: [master]
+
+jobs:
+    build:
+        runs-on: ubunto-latest
+        steps:
+            - name: Checkout code
+              uses: actions/checkout@v3
+
+            
