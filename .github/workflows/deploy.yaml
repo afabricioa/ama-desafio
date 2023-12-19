@@ -6,9 +6,22 @@ on:
 
 jobs:
     build:
-        runs-on: ubunto-latest
+        runs-on: ubuntu-latest
         steps:
             - name: Checkout code
               uses: actions/checkout@v3
 
+            - name: Setup Java
+              uses: actions/Setup-java@v3
+              with:
+                distribution: 'temurin'
+                java-version: '17'
+            - name: Build project
+              run: mvn clean install -DskipTests
+            - name: Login Docker
+              run: docker login -u ${{secrets.DOCKER_USERNAME}} -p ${{secrets.DOCKER_PASSWORD}}
+            - name: Build docker image
+              run: docker build -t afabricioas/desafio-ama-developer .
+            - name: Push image docker
+              run: docker push afabricioas/desafio-ama-developer
             
